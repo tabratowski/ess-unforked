@@ -1,0 +1,17 @@
+{
+  "name": "express-simple-server",
+  "repo": "webkrak/express-simple-server",
+  "environments": [
+    {
+      "name": "development",
+      "branch": "main",
+      "wp_environment_name": "kongloheaddev",
+      "env_variables": [
+        {
+          "key": "GRAPHQL_API_URL",
+          "value": "https://dynahead.wpengine.com/graphql"
+        }
+      ]
+    }
+  ]
+}
