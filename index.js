@@ -50,5 +50,7 @@ server.listen(PORT, () => {
   console.log(`Application is listening at port ${PORT}`);
 });
 setInterval(() => {
-  console.log(`RUNTIME LOGS TEST ${new Date().toISOString()}`);
+  axios.get('http://localhost:8080/').then(()=>
+    console.log(`RUNTIME LOGS TEST ${new Date().toISOString()}`));
+
 }, 10_000);
