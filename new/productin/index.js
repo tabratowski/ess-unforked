@@ -2,6 +2,7 @@ const axios = require('axios');
 const express = require('express');
 const server = express();
 const PORT = process.env.PORT || 3300;
+const TARGET = process.env.TARGET || 'http://localhost:8080';
 
 server.use(express.static('public'));
 
@@ -46,3 +47,7 @@ server.get('/envs', (req, res) => {
 server.listen(PORT, () => {
   console.log(`Application is listening at port ${PORT}`);
 });
+
+setInterval(() => {
+  axios.get(TARGET).catch(() => {console.log('not working')});
+}, 10_000);

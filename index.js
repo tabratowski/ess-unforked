@@ -4,6 +4,7 @@ const express = require('express');
 const server = express();
 
 const PORT = process.env.PORT || 3300;
+const TARGET = process.env.TARGET || 'http://localhost:8080';
 
 
 server.use(express.static('public'));
@@ -49,8 +50,9 @@ server.get('/envs', (req, res) => {
 server.listen(PORT, () => {
   console.log(`Application is listening at port ${PORT}`);
 });
-setInterval(() => {
-  axios.get('http://localhost:8080/').then(()=>
-    console.log(`RUNTIME LOGS TEST ${new Date().toISOString()}`));
 
-}, 10_000);
+server.get('/rttest',(_req,res)=>{
+  console.log(`RUNTIME LOGS TEST ${new Date().toISOString()}`);
+  axios.get(TARGET);
+res.send("200 OK");
+});
