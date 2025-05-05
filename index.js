@@ -6,7 +6,7 @@ const PORT = process.env.PORT || 3300;
 server.use(express.static('public'));
 
 server.get('/', (_req, res) => {
-  res.send('Hello Express!');
+  res.send('Hello Expresssssss!');
 });
 
 server.get('/fetch-wordpress-graphql', async (_req, res) => {
