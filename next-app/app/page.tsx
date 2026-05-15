@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -15,7 +16,7 @@ import { authApiClient } from "@/lib/authApiClient";
 
 type Mode = "signin" | "register";
 
-export default function Home() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -201,5 +202,13 @@ export default function Home() {
         </p>
       </form>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
