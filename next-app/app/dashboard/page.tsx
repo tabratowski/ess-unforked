@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { authApiClient } from "@/lib/authApiClient";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -11,20 +12,36 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (!firebaseUser) {
-        router.replace("/?redirectUrl=/dashboard");
-      } else {
-        setUser(firebaseUser);
+    let cancelled = false;
+
+    async function init() {
+      // Wait for Firebase to finish reading persisted auth from IndexedDB
+      await auth.authStateReady();
+      if (cancelled) return;
+
+      setUser(auth.currentUser);
+
+      // Validate _session cookie server-side
+      const authenticated = await authApiClient.checkSession();
+      if (cancelled) return;
+
+      if (!authenticated) {
+        router.replace("/");
+        return;
       }
+
       setLoading(false);
-    });
-    return unsubscribe;
+    }
+
+    init();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    sessionStorage.removeItem("accessToken");
+    await Promise.all([signOut(auth), authApiClient.logout()]);
     router.replace("/");
   };
 
@@ -35,8 +52,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
@@ -50,21 +65,23 @@ export default function Dashboard() {
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               Email
             </span>
-            <span>{user.email}</span>
+            <span>{user?.email ?? "—"}</span>
           </div>
 
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               User ID
             </span>
-            <span className="font-mono text-xs break-all">{user.uid}</span>
+            <span className="font-mono text-xs break-all">
+              {user?.uid ?? "—"}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               Email Verified
             </span>
-            <span>{user.emailVerified ? "Yes" : "No"}</span>
+            <span>{user ? (user.emailVerified ? "Yes" : "No") : "—"}</span>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -72,7 +89,7 @@ export default function Dashboard() {
               Account Created
             </span>
             <span>
-              {user.metadata.creationTime
+              {user?.metadata.creationTime
                 ? new Date(user.metadata.creationTime).toLocaleString()
                 : "—"}
             </span>
@@ -83,7 +100,7 @@ export default function Dashboard() {
               Last Sign-In
             </span>
             <span>
-              {user.metadata.lastSignInTime
+              {user?.metadata.lastSignInTime
                 ? new Date(user.metadata.lastSignInTime).toLocaleString()
                 : "—"}
             </span>

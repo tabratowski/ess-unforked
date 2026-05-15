@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  onAuthStateChanged,
+  User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { authApiClient } from "@/lib/authApiClient";
 
 type Mode = "signin" | "register";
 
@@ -21,14 +24,28 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // On mount: if a valid _session cookie exists, skip the login form
+  useEffect(() => {
+    authApiClient.checkSession().then((authenticated) => {
+      if (authenticated) {
+        const redirectUrl = searchParams.get("redirectUrl");
+        router.replace(
+          redirectUrl && redirectUrl.startsWith("/")
+            ? redirectUrl
+            : "/dashboard",
+        );
+      }
+    });
+  }, [router, searchParams]);
+
   const handleGoogleSignIn = async () => {
     setError(null);
     try {
       const credential = await signInWithPopup(auth, new GoogleAuthProvider());
       const token = await credential.user.getIdToken();
       await credential.user.getIdTokenResult(false);
-      sessionStorage.setItem("accessToken", token);
       const redirectUrl = searchParams.get("redirectUrl");
+      await authApiClient.storeToken(token, credential.user.refreshToken);
       router.push(
         redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/dashboard",
       );
@@ -51,7 +68,7 @@ export default function Home() {
       // Validate token with Firebase before proceeding
       await credential.user.getIdTokenResult(/* forceRefresh */ false);
 
-      sessionStorage.setItem("accessToken", token);
+      await authApiClient.storeToken(token, credential.user.refreshToken);
 
       const redirectUrl = searchParams.get("redirectUrl");
       router.push(
