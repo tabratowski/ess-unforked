@@ -16,6 +16,35 @@ import { authApiClient } from "@/lib/authApiClient";
 
 type Mode = "signin" | "register";
 
+const ALLOWED_REDIRECT_HOSTS = [
+  "wpenginepoweredstaging.com",
+  "wpenginepowered.com",
+];
+
+function isSafeRedirect(url: string): boolean {
+  if (url.startsWith("/")) return true;
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_REDIRECT_HOSTS.some(
+      (h) => hostname === h || hostname.endsWith("." + h),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function navigate(
+  router: ReturnType<typeof useRouter>,
+  url: string,
+  replace = false,
+) {
+  if (url.startsWith("/")) {
+    replace ? router.replace(url) : router.push(url);
+  } else {
+    replace ? window.location.replace(url) : (window.location.href = url);
+  }
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,10 +59,12 @@ function LoginForm() {
     authApiClient.checkSession().then((authenticated) => {
       if (authenticated) {
         const redirectUrl = searchParams.get("redirectUrl");
-        router.replace(
-          redirectUrl && redirectUrl.startsWith("/")
+        navigate(
+          router,
+          redirectUrl && isSafeRedirect(redirectUrl)
             ? redirectUrl
             : "/dashboard",
+          true,
         );
       }
     });
@@ -47,8 +78,9 @@ function LoginForm() {
       await credential.user.getIdTokenResult(false);
       const redirectUrl = searchParams.get("redirectUrl");
       await authApiClient.storeToken(token, credential.user.refreshToken);
-      router.push(
-        redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/dashboard",
+      navigate(
+        router,
+        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard",
       );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Google sign-in failed.");
@@ -72,8 +104,9 @@ function LoginForm() {
       await authApiClient.storeToken(token, credential.user.refreshToken);
 
       const redirectUrl = searchParams.get("redirectUrl");
-      router.push(
-        redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/dashboard",
+      navigate(
+        router,
+        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard",
       );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
