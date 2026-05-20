@@ -19,6 +19,7 @@ type Mode = "signin" | "register";
 const ALLOWED_REDIRECT_HOSTS = [
   "wpenginepoweredstaging.com",
   "wpenginepowered.com",
+  "workers.dev",
 ];
 
 function isSafeRedirect(url: string): boolean {
