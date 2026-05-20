@@ -41,10 +41,11 @@ export async function POST(req: NextRequest) {
   if (idToken) {
     res.cookies.set("__session", idToken, {
       httpOnly: true,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      secure: true,
       path: "/",
-      maxAge: 60 * 60, // 1 hour
+      domain: ".wpenginepoweredstaging.com",
+      maxAge: 60 * 60,
     });
   }
   console.log("Set __session cookie with idToken:", idToken);

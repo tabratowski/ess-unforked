@@ -19,7 +19,6 @@ type Mode = "signin" | "register";
 const ALLOWED_REDIRECT_HOSTS = [
   "wpenginepoweredstaging.com",
   "wpenginepowered.com",
-  "workers.dev",
 ];
 
 function isSafeRedirect(url: string): boolean {
@@ -60,13 +59,11 @@ function LoginForm() {
     authApiClient.checkSession().then((authenticated) => {
       if (authenticated) {
         const redirectUrl = searchParams.get("redirectUrl");
-        navigate(
-          router,
+        const dest =
           redirectUrl && isSafeRedirect(redirectUrl)
             ? redirectUrl
-            : "/dashboard",
-          true,
-        );
+            : "/dashboard";
+        navigate(router, dest, true);
       }
     });
   }, [router, searchParams]);
@@ -79,10 +76,9 @@ function LoginForm() {
       await credential.user.getIdTokenResult(false);
       const redirectUrl = searchParams.get("redirectUrl");
       await authApiClient.storeToken(token, credential.user.refreshToken);
-      navigate(
-        router,
-        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard",
-      );
+      const dest =
+        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard";
+      navigate(router, dest);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Google sign-in failed.");
     }
@@ -105,10 +101,9 @@ function LoginForm() {
       await authApiClient.storeToken(token, credential.user.refreshToken);
 
       const redirectUrl = searchParams.get("redirectUrl");
-      navigate(
-        router,
-        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard",
-      );
+      const dest =
+        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard";
+      navigate(router, dest);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
     }

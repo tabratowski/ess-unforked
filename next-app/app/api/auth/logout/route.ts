@@ -8,11 +8,10 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ success: true });
   res.cookies.set("__session", "", {
     httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    secure: true,
     path: "/",
-    maxAge: 0,
+    domain: ".wpenginepoweredstaging.com",
   });
-
   return res;
 }
