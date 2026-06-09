@@ -4,7 +4,6 @@ import { guardInternal } from "@/lib/guardInternal";
 export async function POST(req: NextRequest) {
   const forbidden = guardInternal(req);
   if (forbidden) return forbidden;
-
   const secret = process.env.EXTERNAL_API_SECRET;
   const baseUrl = process.env.EXTERNAL_API_URL;
 
@@ -30,6 +29,7 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify(body),
   });
+  console.log(JSON.stringify(body));
 
   const data: unknown = await response.json().catch(() => null);
 

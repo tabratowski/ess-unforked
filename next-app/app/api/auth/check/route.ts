@@ -29,7 +29,14 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({ idToken: idToken }),
   });
-  console.log("response from external API:", response.status);
+  console.log(
+    "testing multiline",
+    JSON.stringify({
+      testing: "multiline",
+      someField: "someValue",
+      anotherField: "anotherValue",
+    }),
+  );
 
   if (response.ok) {
     const data: unknown = await response.json().catch(() => null);
