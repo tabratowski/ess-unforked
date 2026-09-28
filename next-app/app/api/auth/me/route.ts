@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const forbidden = guardInternal(req);
   if (forbidden) return forbidden;
 
-  const idToken = req.cookies.get("_session")?.value;
+  const idToken = req.cookies.get("__session")?.value;
   if (!idToken) {
     return NextResponse.json({ error: "No session" }, { status: 401 });
   }

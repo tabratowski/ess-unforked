@@ -35,6 +35,8 @@ export async function internalFetch(
       "Content-Type": "application/json",
       "x-internal-request": "1",
       "x-csrf-token": csrfToken,
+      "x-license-key": process.env.NEXT_PUBLIC_LICENSE_KEY ?? "",
+      "x-tenant-id": process.env.NEXT_PUBLIC_TENANT_ID ?? "",
       ...(options?.headers ?? {}),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,

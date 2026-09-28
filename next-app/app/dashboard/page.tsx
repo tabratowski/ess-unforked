@@ -2,46 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { authApiClient } from "@/lib/authApiClient";
+import { identityClient, clearSession, type Subscriber } from "@/lib/identityClient";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function init() {
-      // Wait for Firebase to finish reading persisted auth from IndexedDB
-      await auth.authStateReady();
+    identityClient.getMe().then((me) => {
       if (cancelled) return;
-
-      setUser(auth.currentUser);
-
-      // Validate _session cookie server-side
-      const authenticated = await authApiClient.checkSession();
-      if (cancelled) return;
-
-      if (!authenticated) {
+      if (!me) {
         router.replace("/");
         return;
       }
-
+      setSubscriber(me);
       setLoading(false);
-    }
-
-    init();
+    });
 
     return () => {
       cancelled = true;
     };
   }, [router]);
 
-  const handleLogout = async () => {
-    await Promise.all([signOut(auth), authApiClient.logout()]);
+  const handleLogout = () => {
+    clearSession();
     router.replace("/");
   };
 
@@ -65,15 +52,17 @@ export default function Dashboard() {
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               Email
             </span>
-            <span>{user?.email ?? "—"}</span>
+            <span>{subscriber?.email ?? "—"}</span>
           </div>
 
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              User ID
+              Name
             </span>
-            <span className="font-mono text-xs break-all">
-              {user?.uid ?? "—"}
+            <span>
+              {subscriber?.givenName || subscriber?.familyName
+                ? `${subscriber?.givenName ?? ""} ${subscriber?.familyName ?? ""}`.trim()
+                : "—"}
             </span>
           </div>
 
@@ -81,29 +70,14 @@ export default function Dashboard() {
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
               Email Verified
             </span>
-            <span>{user ? (user.emailVerified ? "Yes" : "No") : "—"}</span>
+            <span>{subscriber ? (subscriber.emailVerified ? "Yes" : "No") : "—"}</span>
           </div>
 
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Account Created
+              Profile Complete
             </span>
-            <span>
-              {user?.metadata.creationTime
-                ? new Date(user.metadata.creationTime).toLocaleString()
-                : "—"}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Last Sign-In
-            </span>
-            <span>
-              {user?.metadata.lastSignInTime
-                ? new Date(user.metadata.lastSignInTime).toLocaleString()
-                : "—"}
-            </span>
+            <span>{subscriber ? (subscriber.profileComplete ? "Yes" : "No") : "—"}</span>
           </div>
         </div>
 

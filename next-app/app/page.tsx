@@ -3,16 +3,7 @@
 import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  User,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { authApiClient } from "@/lib/authApiClient";
+import { identityClient } from "@/lib/identityClient";
 
 type Mode = "signin" | "register";
 
@@ -45,6 +36,13 @@ function navigate(
   }
 }
 
+function getRedirectTarget(searchParams: URLSearchParams): string {
+  const redirectUrl = searchParams.get("redirectUrl");
+  return redirectUrl && isSafeRedirect(redirectUrl)
+    ? redirectUrl
+    : "/dashboard";
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,56 +52,68 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // On mount: if a valid _session cookie exists, skip the login form
   useEffect(() => {
-    authApiClient.checkSession().then((authenticated) => {
-      if (authenticated) {
-        const redirectUrl = searchParams.get("redirectUrl");
-        const dest =
-          redirectUrl && isSafeRedirect(redirectUrl)
-            ? redirectUrl
-            : "/dashboard";
-        navigate(router, dest, true);
+    const code = searchParams.get("code");
+    if (code) {
+      identityClient
+        .socialSignIn({
+          provider: "SOCIAL_PROVIDER_GOOGLE",
+          code,
+          redirectUri: `${window.location.origin}`,
+        })
+        .then(() => {
+          navigate(router, getRedirectTarget(searchParams));
+        })
+        .catch((err: unknown) => {
+          setError(
+            err instanceof Error ? err.message : "Google sign-in failed.",
+          );
+        });
+      return;
+    }
+
+    identityClient.getMe().then((me) => {
+      if (me) {
+        navigate(router, getRedirectTarget(searchParams), true);
       }
     });
   }, [router, searchParams]);
 
-  const handleGoogleSignIn = async () => {
-    setError(null);
-    try {
-      const credential = await signInWithPopup(auth, new GoogleAuthProvider());
-      const token = await credential.user.getIdToken();
-      await credential.user.getIdTokenResult(false);
-      const redirectUrl = searchParams.get("redirectUrl");
-      await authApiClient.storeToken(token, credential.user.refreshToken);
-      const dest =
-        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard";
-      navigate(router, dest);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed.");
+  const handleGoogleSignIn = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setError("Google sign-in is not configured.");
+      return;
     }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: `${window.location.origin}`,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "consent",
+    });
+
+    const redirectUrl = searchParams.get("redirectUrl");
+    if (redirectUrl) {
+      params.set("state", redirectUrl);
+    }
+
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
-      const credential =
-        mode === "signin"
-          ? await signInWithEmailAndPassword(auth, email, password)
-          : await createUserWithEmailAndPassword(auth, email, password);
+      if (mode === "signin") {
+        await identityClient.authenticate(email, password);
+      } else {
+        await identityClient.signUp({ email, password });
+      }
 
-      const token = await credential.user.getIdToken();
-
-      // Validate token with Firebase before proceeding
-      await credential.user.getIdTokenResult(/* forceRefresh */ false);
-
-      await authApiClient.storeToken(token, credential.user.refreshToken);
-
-      const redirectUrl = searchParams.get("redirectUrl");
-      const dest =
-        redirectUrl && isSafeRedirect(redirectUrl) ? redirectUrl : "/dashboard";
-      navigate(router, dest);
+      navigate(router, getRedirectTarget(searchParams));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
     }

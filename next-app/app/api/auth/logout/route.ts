@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     secure: true,
     path: "/",
     domain: ".wpenginepoweredstaging.com",
+    maxAge: 0,
   });
   return res;
 }

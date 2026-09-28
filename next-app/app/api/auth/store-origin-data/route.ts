@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  const response = await fetch(baseUrl, {
+  const response = await fetch(`${baseUrl}/v1/auth/origin`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
