@@ -84,7 +84,7 @@ function bearerHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function storeSession(idToken: string, subscriberId: string) {
+export function storeSession(idToken: string, subscriberId: string) {
   localStorage.setItem("idToken", idToken);
   localStorage.setItem("subscriberId", subscriberId);
 }

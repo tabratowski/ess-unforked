@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { identityClient } from "@/lib/identityClient";
+import { identityClient, storeSession } from "@/lib/identityClient";
 
 type Mode = "signin" | "register";
 
@@ -53,6 +53,27 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const t = hash.get("t");
+    if (t) {
+      let identityToken: string;
+      try {
+        identityToken = atob(t);
+      } catch {
+        setError("Invalid identity token.");
+        return;
+      }
+      sessionStorage.setItem("identityToken", identityToken);
+      storeSession(identityToken, hash.get("subscriberId") ?? "");
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+      navigate(router, getRedirectTarget(searchParams), true);
+      return;
+    }
+
     const code = searchParams.get("code");
     if (code) {
       identityClient
@@ -80,27 +101,22 @@ function LoginForm() {
   }, [router, searchParams]);
 
   const handleGoogleSignIn = () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
+    const proxyUrl = process.env.NEXT_PUBLIC_PROXY_URL;
+    if (!proxyUrl) {
       setError("Google sign-in is not configured.");
       return;
     }
 
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID ?? "";
+    const licenseId = process.env.NEXT_PUBLIC_LICENSE_KEY ?? "";
+    sessionStorage.setItem("tenantId", tenantId);
+    sessionStorage.setItem("licenseId", licenseId);
+
     const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: `${window.location.origin}`,
-      response_type: "code",
-      scope: "openid email profile",
-      access_type: "offline",
-      prompt: "consent",
+      redirectUrl: window.location.origin,
+      c: btoa(`${tenantId}:${licenseId}`),
     });
-
-    const redirectUrl = searchParams.get("redirectUrl");
-    if (redirectUrl) {
-      params.set("state", redirectUrl);
-    }
-
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    window.location.href = `${proxyUrl}?${params}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
