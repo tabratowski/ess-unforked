@@ -3,9 +3,9 @@ import { webcrypto } from "node:crypto";
 const AES_256_KEY_BYTES = 32;
 const KID_BYTE_LENGTH = 36;
 
-function decodeEncryptionKey(keyValue: string): Uint8Array {
+function decodeEncryptionKey(keyValue: string): Uint8Array<ArrayBuffer> {
   const trimmed = keyValue.trim();
-  const parseHex = (value: string): Uint8Array => {
+  const parseHex = (value: string): Uint8Array<ArrayBuffer> => {
     const bytes = new Uint8Array(value.length / 2);
     for (let index = 0; index < value.length; index += 2) {
       bytes[index / 2] = Number.parseInt(value.slice(index, index + 2), 16);
@@ -274,7 +274,7 @@ async function fetchPublicJwks(): Promise<PublicJwk[]> {
 
 /** Returns the first key from the remote JWKS, imported for RSA-OAEP key wrapping. */
 export async function getPublicWrappingKey(): Promise<{
-  key: CryptoKey;
+  key: webcrypto.CryptoKey;
   kid: string;
 }> {
   const [jwk] = await fetchPublicJwks();
