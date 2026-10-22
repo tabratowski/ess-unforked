@@ -100,23 +100,34 @@ function LoginForm() {
     });
   }, [router, searchParams]);
 
-  const handleGoogleSignIn = () => {
-    const proxyUrl = process.env.NEXT_PUBLIC_PROXY_URL;
-    if (!proxyUrl) {
-      setError("Google sign-in is not configured.");
-      return;
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/config", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Unable to load Google sign-in configuration.");
+      }
+      const { proxyUrl, tenantId, licenseId } = (await response.json()) as {
+        proxyUrl: string;
+        tenantId: string;
+        licenseId: string;
+      };
+      if (!proxyUrl) {
+        setError("Google sign-in is not configured.");
+        return;
+      }
+
+      sessionStorage.setItem("tenantId", tenantId);
+      sessionStorage.setItem("licenseId", licenseId);
+
+      const params = new URLSearchParams({
+        redirectUrl: window.location.origin,
+        c: btoa(`${tenantId}:${licenseId}`),
+      });
+      window.location.href = `${proxyUrl}?${params}`;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed.");
     }
-
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID ?? "";
-    const licenseId = process.env.NEXT_PUBLIC_LICENSE_KEY ?? "";
-    sessionStorage.setItem("tenantId", tenantId);
-    sessionStorage.setItem("licenseId", licenseId);
-
-    const params = new URLSearchParams({
-      redirectUrl: window.location.origin,
-      c: btoa(`${tenantId}:${licenseId}`),
-    });
-    window.location.href = `${proxyUrl}?${params}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -35,24 +35,32 @@ function Proxy() {
   // exchanging the one-time Google code twice.
   const started = useRef(false);
 
-  const handleGoogleSignIn = (redirectUrl: string) => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setError("Google sign-in is not configured.");
-      return;
+  const handleGoogleSignIn = async (redirectUrl: string) => {
+    try {
+      const response = await fetch("/api/auth/config", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Unable to load Google sign-in configuration.");
+      }
+      const { clientId } = (await response.json()) as { clientId: string };
+      if (!clientId) {
+        setError("Google sign-in is not configured.");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: `${window.location.origin}`,
+        response_type: "code",
+        scope: "openid email profile",
+        access_type: "offline",
+        prompt: "consent",
+        state: redirectUrl,
+      });
+
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed.");
     }
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: `${window.location.origin}`,
-      response_type: "code",
-      scope: "openid email profile",
-      access_type: "offline",
-      prompt: "consent",
-      state: redirectUrl,
-    });
-
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   useEffect(() => {
