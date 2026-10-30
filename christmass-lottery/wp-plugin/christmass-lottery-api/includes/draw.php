@@ -15,6 +15,7 @@ function cl_draw_if_full(array $state): array {
 		$state['assignments'] = cl_draw($state['member_ids']);
 		$state['status'] = 'drawn';
 		$state['drawn_at'] = gmdate('c');
+		$state['revealed'] = [];
 	}
 	return $state;
 }
@@ -98,6 +99,24 @@ function cl_apply_redraw(array $state): array {
 	}
 	$state['assignments'] = cl_draw($state['member_ids']);
 	$state['drawn_at'] = gmdate('c');
+	$state['revealed'] = [];
+
+	return ['state' => $state, 'error' => null];
+}
+
+/** Record that a member has looked at their draw (so the UI can grey out "Draw"). */
+function cl_apply_reveal(array $state, int $user_id): array {
+	if (!in_array($user_id, $state['member_ids'], true)) {
+		return ['state' => $state, 'error' => 'not_member'];
+	}
+	if ($state['status'] !== 'drawn') {
+		return ['state' => $state, 'error' => 'not_drawn'];
+	}
+	$revealed = $state['revealed'] ?? [];
+	if (!in_array($user_id, $revealed, true)) {
+		$revealed[] = $user_id;
+	}
+	$state['revealed'] = $revealed;
 
 	return ['state' => $state, 'error' => null];
 }

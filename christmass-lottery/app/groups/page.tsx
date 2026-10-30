@@ -23,7 +23,7 @@ import JoinButton from "./JoinButton";
 
 function GroupAction({ group }: { group: Group }) {
   if (group.status === "drawn") {
-    return group.isMember ? <DrawButton groupId={group.id} /> : null;
+    return group.isMember ? <DrawButton groupId={group.id} receiverLogin={group.receiverLogin} /> : null;
   }
   if (group.isMember) {
     return (

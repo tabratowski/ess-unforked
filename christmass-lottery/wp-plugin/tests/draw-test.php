@@ -89,4 +89,18 @@ foreach ($r['state']['assignments'] as $k => $v) {
 }
 check(cl_apply_redraw($open3)['error'] === 'not_drawn', 'cannot redraw open group');
 
+// cl_apply_reveal
+$r = cl_apply_reveal($drawn4, 2);
+check($r['error'] === null && $r['state']['revealed'] === [2], 'reveal marks member');
+$r = cl_apply_reveal($r['state'], 2);
+check($r['error'] === null && $r['state']['revealed'] === [2], 'reveal is idempotent');
+check(cl_apply_reveal($drawn4, 9)['error'] === 'not_member', 'non-member cannot reveal');
+check(cl_apply_reveal($open3, 1)['error'] === 'not_drawn', 'cannot reveal before draw');
+
+// redraw and fresh draws reset revealed
+$r = cl_apply_redraw(array_merge($drawn4, ['revealed' => [1, 2]]));
+check($r['state']['revealed'] === [], 'redraw clears revealed');
+$r = cl_apply_join(['capacity' => 2, 'member_ids' => [1], 'status' => 'open', 'assignments' => [], 'drawn_at' => null], 2);
+check($r['state']['revealed'] === [], 'new draw starts with nobody revealed');
+
 echo "OK\n";

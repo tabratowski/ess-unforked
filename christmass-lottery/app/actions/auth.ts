@@ -28,14 +28,14 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
 export async function loginAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const login = str(fd, "login").trim();
   const password = str(fd, "password");
-  if (!login || !password) return { error: "Enter your login and password." };
+  if (!login || !password) return { error: "Podaj login i hasło." };
   try {
     const user = await verifyCredentials(login, password);
-    if (!user) return { error: "Wrong login or password." };
+    if (!user) return { error: "Nieprawidłowy login lub hasło." };
     await createSession(user);
   } catch (e) {
     console.error("loginAction", e);
-    return { error: "Something went wrong. Please try again." };
+    return { error: "Coś poszło nie tak. Spróbuj ponownie." };
   }
   redirect("/groups");
 }
@@ -46,9 +46,9 @@ export async function logoutAction(): Promise<void> {
 }
 
 export async function forgotPasswordAction(_prev: FormState, fd: FormData): Promise<FormState> {
-  const message = "If that account exists, we've sent an email.";
+  const message = "Jeśli takie konto istnieje, wysłaliśmy maila.";
   const email = str(fd, "email").trim().toLowerCase();
-  if (!email) return { error: "Enter your email." };
+  if (!email) return { error: "Podaj swój email." };
   try {
     const reset = await createResetKey(email);
     if (reset) {
@@ -56,8 +56,8 @@ export async function forgotPasswordAction(_prev: FormState, fd: FormData): Prom
       const link = `${base}/reset-password?login=${encodeURIComponent(reset.login)}&key=${encodeURIComponent(reset.key)}`;
       await sendMail({
         to: email,
-        subject: "Christmass Lottery: reset your password",
-        text: `Hi ${reset.login},\n\nReset your password here:\n${link}\n\nIf you didn't ask for this, ignore this email.`,
+        subject: "Christmass Lottery: zresetuj hasło",
+        text: `Cześć ${reset.login},\n\nZresetuj swoje hasło tutaj:\n${link}\n\nJeśli nie prosiłeś o to, zignoruj tego maila.`,
       });
     }
   } catch (e) {
@@ -72,9 +72,9 @@ export async function resetPasswordAction(_prev: FormState, fd: FormData): Promi
   try {
     await resetPassword(str(fd, "login"), str(fd, "key"), pw.value);
   } catch (e) {
-    if (e instanceof WpError && e.code === "invalid_key") return { error: "This reset link is invalid or expired." };
+    if (e instanceof WpError && e.code === "invalid_key") return { error: "Ten link do resetowania hasła jest nieprawidłowy lub wygasł." };
     console.error("resetPasswordAction", e);
-    return { error: "Something went wrong. Please try again." };
+    return { error: "Coś poszło nie tak. Spróbuj ponownie." };
   }
   redirect("/login?reset=1");
 }

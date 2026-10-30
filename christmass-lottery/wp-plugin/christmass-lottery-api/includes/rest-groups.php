@@ -45,6 +45,11 @@ function cl_register_group_routes(): void {
 		'callback' => 'cl_rest_remove_member',
 		'permission_callback' => 'cl_permission',
 	]);
+	register_rest_route(CL_NAMESPACE, '/groups/(?P<id>\d+)/reveal', [
+		'methods' => 'POST',
+		'callback' => 'cl_rest_reveal_assignment',
+		'permission_callback' => 'cl_permission',
+	]);
 	register_rest_route(CL_NAMESPACE, '/groups/(?P<id>\d+)/redraw', [
 		'methods' => 'POST',
 		'callback' => 'cl_rest_redraw_group',
@@ -79,7 +84,7 @@ function cl_mutate_group(int $id, callable $change) {
 		wp_cache_delete($id, 'post_meta');
 		$result = $change(cl_read_state($id));
 		if ($result['error'] !== null) {
-			$status = $result['error'] === 'not_member' ? 404 : ($result['error'] === 'invalid_capacity' ? 400 : 409);
+			$status = in_array($result['error'], ['not_member', 'not_drawn'], true) ? 404 : ($result['error'] === 'invalid_capacity' ? 400 : 409);
 			return cl_error($result['error'], CL_STATE_ERRORS[$result['error']], $status);
 		}
 		cl_write_state($id, $result['state']);
@@ -101,6 +106,7 @@ function cl_read_state(int $id): array {
 		'status' => get_post_meta($id, 'status', true) ?: 'open',
 		'assignments' => (array) (get_post_meta($id, 'assignments', true) ?: []),
 		'drawn_at' => get_post_meta($id, 'drawn_at', true) ?: null,
+		'revealed' => array_map('intval', (array) (get_post_meta($id, 'revealed', true) ?: [])),
 	];
 }
 
@@ -112,11 +118,19 @@ function cl_write_state(int $id, array $state): void {
 	update_post_meta($id, 'status', $state['status']);
 	update_post_meta($id, 'assignments', $state['assignments']);
 	update_post_meta($id, 'drawn_at', $state['drawn_at'] ?? '');
+	update_post_meta($id, 'revealed', $state['revealed'] ?? []);
 }
 
-/** Public shape of a group. Never includes assignments. */
+function cl_receiver_login(array $state, int $user_id): string {
+	$receiver = get_userdata((int) $state['assignments'][$user_id]);
+	return $receiver ? $receiver->user_login : '(deleted user)';
+}
+
+/** Public shape of a group. Only ever includes the caller's own receiver, and only after they revealed it. */
 function cl_group_payload(WP_Post $post, int $user_id = 0): array {
 	$state = cl_read_state($post->ID);
+	$revealed = $user_id > 0 && $state['status'] === 'drawn' && in_array($user_id, $state['revealed'], true)
+		&& isset($state['assignments'][$user_id]);
 	return [
 		'id' => $post->ID,
 		'name' => $post->post_title,
@@ -125,6 +139,8 @@ function cl_group_payload(WP_Post $post, int $user_id = 0): array {
 		'status' => $state['status'],
 		'drawnAt' => $state['drawn_at'],
 		'isMember' => $user_id > 0 && in_array($user_id, $state['member_ids'], true),
+		'revealed' => $revealed,
+		'receiverLogin' => $revealed ? cl_receiver_login($state, $user_id) : null,
 	];
 }
 
@@ -193,11 +209,28 @@ function cl_rest_get_assignment(WP_REST_Request $req) {
 	if ($state['status'] !== 'drawn' || !isset($state['assignments'][$user_id])) {
 		return cl_error('not_drawn', 'This group has not been drawn yet.', 404);
 	}
-	$receiver = get_userdata((int) $state['assignments'][$user_id]);
-
 	return [
 		'groupName' => $post->post_title,
-		'receiverLogin' => $receiver ? $receiver->user_login : '(deleted user)',
+		'receiverLogin' => cl_receiver_login($state, $user_id),
+	];
+}
+
+/** Mark the caller's draw as revealed and return it. */
+function cl_rest_reveal_assignment(WP_REST_Request $req) {
+	$id = (int) $req['id'];
+	$user_id = (int) $req->get_param('user_id');
+	$post = cl_get_group_post($id);
+	if (!$post) {
+		return cl_error('not_found', 'Group not found.', 404);
+	}
+	$result = cl_mutate_group($id, fn($state) => cl_apply_reveal($state, $user_id));
+	if (is_wp_error($result)) {
+		return $result;
+	}
+	wp_cache_delete($id, 'post_meta');
+	return [
+		'groupName' => $post->post_title,
+		'receiverLogin' => cl_receiver_login(cl_read_state($id), $user_id),
 	];
 }
 

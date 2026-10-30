@@ -97,3 +97,7 @@ export async function removeMember(groupId: number, userId: number): Promise<Gro
 export async function redrawGroup(groupId: number): Promise<Group> {
   return wpFetch<Group>(`/groups/${id(groupId)}/redraw`, { method: "POST" });
 }
+
+export async function revealAssignment(groupId: number, userId: number): Promise<Assignment | null> {
+  return nullOn(404, wpFetch<Assignment>(`/groups/${id(groupId)}/reveal`, { method: "POST", body: { user_id: id(userId) } }));
+}

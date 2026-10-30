@@ -8,6 +8,7 @@ import {
   listMembers,
   redrawGroup,
   removeMember,
+  revealAssignment,
   updateGroup,
   verifyCredentials,
   WpError,
@@ -82,6 +83,19 @@ describe("wp client", () => {
     fetchMock.mockResolvedValue(respond(200, []));
     await listGroups(5);
     expect(fetchMock.mock.calls[0][0]).toBe("https://wp.example.com/wp-json/cl/v1/groups?user_id=5");
+  });
+
+  it("reveals the caller's draw with POST and returns null when unavailable", async () => {
+    fetchMock.mockResolvedValueOnce(respond(200, { groupName: "Office", receiverLogin: "elf" }));
+    expect(await revealAssignment(3, 1)).toEqual({ groupName: "Office", receiverLogin: "elf" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://wp.example.com/wp-json/cl/v1/groups/3/reveal");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ user_id: 1 });
+
+    fetchMock.mockResolvedValueOnce(respond(404, { code: "not_drawn", message: "x", data: { status: 404 } }));
+    expect(await revealAssignment(3, 1)).toBeNull();
+    await expect(revealAssignment("3/x#" as unknown as number, 1)).rejects.toThrow(/invalid id/i);
   });
 
   describe("group management", () => {

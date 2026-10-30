@@ -8,6 +8,9 @@ export type Group = {
   status: "open" | "drawn";
   drawnAt: string | null;
   isMember: boolean;
+  /** The caller already clicked Draw; their own receiver is included. */
+  revealed: boolean;
+  receiverLogin: string | null;
 };
 
 export type Assignment = { groupName: string; receiverLogin: string };

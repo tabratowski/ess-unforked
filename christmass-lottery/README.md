@@ -33,6 +33,12 @@ everyone is drawn exactly once, and the draw can't get stuck. The result and
 the draw date are stored on the group in WordPress. Joins are serialised with a
 MySQL lock, so a group can't be overfilled or drawn twice.
 
+## Drawing
+
+Once a member clicks **Losuj**, the plugin records it (group meta `revealed`).
+From then on the groups page shows their result, a greyed-out **Losuj** and a
+**Wyślij ponownie mail** button that emails the same result again.
+
 ## Managing groups (owner only)
 
 The owner (`OWNER_EMAIL`) sees **Manage groups** on the groups page (`/groups/manage`):
@@ -41,8 +47,9 @@ The owner (`OWNER_EMAIL`) sees **Manage groups** on the groups page (`/groups/ma
 - rename any group; resize open groups (even, not below the current headcount;
   shrinking to exactly the headcount runs the draw)
 - remove a member from an open group
-- redraw a drawn group (same people, new draw date). People who already clicked
-  Draw have the old result by email, so tell them to draw again
+- redraw a drawn group (same people, new draw date). Everyone's Draw button
+  becomes active again; people who already drew have the old result by email,
+  so tell them to draw again
 - delete a group and its draw
 
 Nobody, including the owner, can see who drew whom.

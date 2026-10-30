@@ -6,7 +6,7 @@ import { isOwner } from "@/lib/owner";
 import { getSession } from "@/lib/session";
 import type { FormState } from "@/lib/types";
 import { validateCapacity } from "@/lib/validation";
-import { createGroup, getAssignment, joinGroup, WpError } from "@/lib/wp";
+import { createGroup, joinGroup, revealAssignment, WpError } from "@/lib/wp";
 
 const JOIN_ERRORS: Record<string, string> = {
   group_full: "This group is already full.",
@@ -50,17 +50,18 @@ export async function drawAction(groupId: number): Promise<{ error?: string; rec
   if (!session) return { error: "Please log in again." };
   let assignment;
   try {
-    assignment = await getAssignment(groupId, session.id);
+    assignment = await revealAssignment(groupId, session.id);
   } catch (e) {
     console.error("drawAction", e);
     return { error: "Couldn't load your draw. Please try again." };
   }
   if (!assignment) return { error: "Your group hasn't been drawn yet or you're not a member." };
+  revalidatePath("/groups");
   try {
     await sendMail({
       to: session.email,
-      subject: `Christmass Lottery: your draw in ${assignment.groupName}`,
-      text: `You are buying a present for ${assignment.receiverLogin}.`,
+      subject: `Christmass Lottery: losowanie w grupie ${assignment.groupName}`,
+      text: `Kupujesz prezent dla ${assignment.receiverLogin}.`,
     });
   } catch (e) {
     console.error("drawAction mail", e);
